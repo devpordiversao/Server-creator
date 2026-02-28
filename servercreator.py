@@ -1,4 +1,4 @@
-# main.py - CORRIGIDO
+# main.py - CORRIGIDO: Bot configura servidor existente (não cria)
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -309,7 +309,7 @@ class ServerBot(commands.Bot):
                     ('📺 Streamer', discord.Color.magenta(), [], False),
                     ('🎬 Criador Conteúdo', discord.Color.from_rgb(255, 0, 255), [], False),
                     ('🏆 Campeão', discord.Color.gold(), [], False),
-                    ('🥈 Elite', discord.Color.from_rgb(192, 192, 192), [], False),  # CORRIGIDO: silver -> from_rgb
+                    ('🥈 Elite', discord.Color.from_rgb(192, 192, 192), [], False),
                     ('🥉 Competitivo', discord.Color.from_rgb(205, 127, 50), [], False),
                     ('🎯 Tryhard', discord.Color.dark_red(), [], False),
                     ('🎮 Gamer', discord.Color.blue(), [], False),
@@ -443,9 +443,9 @@ class ServerBot(commands.Bot):
                     ('👑 Hokage', discord.Color.gold(), ['administrator'], True),
                     ('🥷 Kage', discord.Color.dark_red(), ['manage_messages', 'kick_members'], True),
                     ('🎌 Sensei', discord.Color.orange(), ['manage_messages'], False),
-                    ('⚡ Protagonista', discord.Color.yellow(), [], False),
+                    ('⚡ Protagonista', discord.Color.gold(), [], False),
                     ('😈 Vilão', discord.Color.dark_purple(), [], False),
-                    ('🗡️ Espadachim', discord.Color.from_rgb(192, 192, 192), [], False),  # CORRIGIDO: silver -> from_rgb
+                    ('🗡️ Espadachim', discord.Color.from_rgb(192, 192, 192), [], False),
                     ('🔥 Super Sayajin', discord.Color.gold(), [], False),
                     ('❄️ Shinigami', discord.Color.dark_blue(), [], False),
                     ('🍥 Ninja', discord.Color.orange(), [], False),
@@ -482,15 +482,14 @@ async def on_ready():
     await bot.change_presence(
         activity=discord.Activity(
             type=discord.ActivityType.watching,
-            name='/createserver para criar servidores!'
+            name='/setupserver para configurar servidores!'
         )
     )
     print(f'{bot.user} está online!')
 
-@bot.tree.command(name='createserver', description='Cria um novo servidor temático completo')
+@bot.tree.command(name='setupserver', description='Configura o servidor atual com um tema completo')
 @app_commands.describe(
-    tema='Escolha o tema do servidor',
-    nome='Nome personalizado para o novo servidor'
+    tema='Escolha o tema do servidor'
 )
 @app_commands.choices(tema=[
     app_commands.Choice(name=f'🎲 RPG', value='rpg'),
@@ -500,11 +499,18 @@ async def on_ready():
     app_commands.Choice(name=f'📚 Estudos', value='estudo'),
     app_commands.Choice(name=f'🍥 Anime/Otaku', value='anime'),
 ])
-async def create_server(
+async def setup_server(
     interaction: discord.Interaction,
-    tema: app_commands.Choice[str],
-    nome: str
+    tema: app_commands.Choice[str]
 ):
+    # Verificar permissões
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            '❌ Você precisa ser administrador para usar este comando!', 
+            ephemeral=True
+        )
+        return
+    
     await interaction.response.defer(ephemeral=True)
     
     template = bot.templates.get(tema.value)
@@ -512,36 +518,18 @@ async def create_server(
         await interaction.followup.send('❌ Tema não encontrado!', ephemeral=True)
         return
     
+    guild = interaction.guild
+    
     try:
-        # Criar o servidor - CORRIGIDO (sem region)
-        guild = await bot.create_guild(name=nome)
-        
-        # Aguardar criação
-        await asyncio.sleep(3)
-        
-        # Buscar o servidor criado
-        guild = bot.get_guild(guild.id)
-        if not guild:
-            await interaction.followup.send('❌ Erro ao acessar o servidor criado!', ephemeral=True)
-            return
-        
-        # Configurar servidor
-        await setup_guild(guild, template, interaction.user)
-        
-        # Criar convite
-        invite = await guild.text_channels[0].create_invite(max_age=0, max_uses=0)
+        # Configurar servidor existente
+        await configure_guild(guild, template, interaction.user)
         
         # Embed de sucesso
         embed = discord.Embed(
-            title=f'{template["icon"]} Servidor Criado com Sucesso!',
-            description=f'O servidor **{nome}** foi criado com o tema **{tema.name}**',
+            title=f'{template["icon"]} Servidor Configurado com Sucesso!',
+            description=f'O servidor **{guild.name}** foi configurado com o tema **{tema.name}**',
             color=template['color'],
             timestamp=datetime.now()
-        )
-        embed.add_field(
-            name='🔗 Link de Convite',
-            value=f'[Clique aqui para entrar]({invite.url})',
-            inline=False
         )
         embed.add_field(
             name='📋 Canais Criados',
@@ -553,24 +541,35 @@ async def create_server(
             value=str(len(template['roles'])),
             inline=True
         )
-        embed.set_footer(text=f'Criado por {interaction.user}', icon_url=interaction.user.display_avatar.url)
+        embed.add_field(
+            name='✨ Próximos Passos',
+            value='Personalize as permissões e aproveite seu novo servidor!',
+            inline=False
+        )
+        embed.set_footer(text=f'Configurado por {interaction.user}', icon_url=interaction.user.display_avatar.url)
         
         await interaction.followup.send(embed=embed, ephemeral=True)
         
     except discord.Forbidden:
         await interaction.followup.send(
-            '❌ Erro: O bot precisa de permissões de administrador para criar servidores!',
+            '❌ Erro: O bot precisa de permissão de Administrador!',
             ephemeral=True
         )
     except Exception as e:
-        await interaction.followup.send(f'❌ Erro ao criar servidor: {str(e)}', ephemeral=True)
+        await interaction.followup.send(f'❌ Erro: {str(e)}', ephemeral=True)
 
-async def setup_guild(guild: discord.Guild, template: dict, creator: discord.User):
-    """Configura o servidor criado com base no template"""
+async def configure_guild(guild: discord.Guild, template: dict, admin_user: discord.User):
+    """Configura um servidor existente com base no template"""
     
     # 1. Criar cargos
     roles_map = {}
     for role_name, color, permissions, hoist in template['roles']:
+        # Verificar se cargo já existe
+        existing_role = discord.utils.get(guild.roles, name=role_name)
+        if existing_role:
+            roles_map[role_name] = existing_role
+            continue
+            
         perms = discord.Permissions()
         for perm in permissions:
             setattr(perms, perm, True)
@@ -579,53 +578,55 @@ async def setup_guild(guild: discord.Guild, template: dict, creator: discord.Use
             name=role_name,
             color=color,
             permissions=perms,
-            hoist=hoist
+            hoist=hoist,
+            reason='Configuração automática do ServerCreator Bot'
         )
         roles_map[role_name] = role
-        await asyncio.sleep(0.5)  # Evitar rate limit
+        await asyncio.sleep(0.5)
     
-    # 2. Configurar cargos do criador
-    member = guild.get_member(creator.id)
+    # 2. Promover admin ao cargo principal
+    member = guild.get_member(admin_user.id)
     if member:
         admin_role = roles_map.get(template['roles'][0][0])
-        if admin_role:
-            await member.add_roles(admin_role)
+        if admin_role and admin_role not in member.roles:
+            await member.add_roles(admin_role, reason='Administrador do servidor')
     
-    # 3. Deletar canais padrão
-    for channel in guild.channels:
-        try:
-            await channel.delete()
-            await asyncio.sleep(0.5)
-        except:
-            pass
-    
-    await asyncio.sleep(2)
-    
-    # 4. Criar categorias
-    cat_info = await guild.create_category('📋 INFORMAÇÕES')
-    cat_chat = await guild.create_category('💬 CHATS')
-    cat_extra = await guild.create_category('🎯 ESPECIALIZADOS')
-    cat_voz = await guild.create_category('🔊 CANAIS DE VOZ')
-    
+    # 3. Criar categorias
+    cat_info = await guild.create_category(
+        '📋 INFORMAÇÕES',
+        reason='Configuração automática'
+    )
+    cat_chat = await guild.create_category(
+        '💬 CHATS',
+        reason='Configuração automática'
+    )
+    cat_extra = await guild.create_category(
+        '🎯 ESPECIALIZADOS',
+        reason='Configuração automática'
+    )
+    cat_voz = await guild.create_category(
+        '🔊 CANAIS DE VOZ',
+        reason='Configuração automática'
+    )
     await asyncio.sleep(1)
     
-    # 5. Criar canais de texto
+    # 4. Criar canais de texto
     welcome_channel = None
     rules_channel = None
     
-    # Dividir canais entre categorias
     texto_channels = template['channels']['texto']
-    info_channels = texto_channels[:3]  # Primeiros 3 em info
-    chat_channels = texto_channels[3:13]  # Próximos 10 em chat
-    extra_channels = texto_channels[13:]  # Resto em extra
+    info_channels = texto_channels[:3]
+    chat_channels = texto_channels[3:13]
+    extra_channels = texto_channels[13:]
     
-    for i, (channel_name, topic) in enumerate(info_channels):
+    for channel_name, topic in info_channels:
         channel = await guild.create_text_channel(
             name=channel_name,
             category=cat_info,
-            topic=topic
+            topic=topic,
+            reason='Configuração automática'
         )
-        if 'boas-vindas' in channel_name:
+        if 'boas-vindas' in channel_name or 'bem-vindo' in channel_name:
             welcome_channel = channel
         elif 'regras' in channel_name:
             rules_channel = channel
@@ -635,7 +636,8 @@ async def setup_guild(guild: discord.Guild, template: dict, creator: discord.Use
         await guild.create_text_channel(
             name=channel_name,
             category=cat_chat,
-            topic=topic
+            topic=topic,
+            reason='Configuração automática'
         )
         await asyncio.sleep(0.5)
     
@@ -643,20 +645,22 @@ async def setup_guild(guild: discord.Guild, template: dict, creator: discord.Use
         await guild.create_text_channel(
             name=channel_name,
             category=cat_extra,
-            topic=topic
+            topic=topic,
+            reason='Configuração automática'
         )
         await asyncio.sleep(0.5)
     
-    # 6. Criar canais de voz
+    # 5. Criar canais de voz
     for channel_name, user_limit in template['channels']['voz']:
         await guild.create_voice_channel(
             name=channel_name,
             category=cat_voz,
-            user_limit=user_limit
+            user_limit=user_limit,
+            reason='Configuração automática'
         )
         await asyncio.sleep(0.5)
     
-    # 7. Configurar sistema de boas-vindas
+    # 6. Configurar mensagens de boas-vindas
     if welcome_channel:
         embed = discord.Embed(
             title=f'{template["icon"]} Bem-vindo ao {guild.name}!',
@@ -665,42 +669,27 @@ async def setup_guild(guild: discord.Guild, template: dict, creator: discord.Use
         )
         if template.get('welcome_image'):
             embed.set_image(url=template['welcome_image'])
-        embed.set_footer(text='Sistema de boas-vindas configurado!')
+        embed.set_footer(text='Configuração automática do ServerCreator Bot')
         
         await welcome_channel.send(embed=embed)
     
-    # 8. Configurar regras
+    # 7. Configurar regras
     if rules_channel:
         rules_embed = discord.Embed(
             title='📜 Regras do Servidor',
             description='Leia atentamente as regras para manter a harmonia!',
             color=template['color']
         )
-        rules_embed.add_field(
-            name='1. Respeito',
-            value='Respeite todos os membros independente de opinião, raça, gênero ou crença.',
-            inline=False
-        )
-        rules_embed.add_field(
-            name='2. Conteúdo Apropriado',
-            value='Proibido conteúdo NSFW, gore ou qualquer material ofensivo.',
-            inline=False
-        )
-        rules_embed.add_field(
-            name='3. Spam',
-            value='Não faça spam ou flood nos canais.',
-            inline=False
-        )
-        rules_embed.add_field(
-            name='4. Divulgação',
-            value='Divulgação apenas nos canais permitidos.',
-            inline=False
-        )
-        rules_embed.add_field(
-            name='5. Regras Específicas',
-            value='Siga as diretrizes de cada canal e tema.',
-            inline=False
-        )
+        rules = [
+            ('1. Respeito', 'Respeite todos os membros independente de opinião, raça, gênero ou crença.'),
+            ('2. Conteúdo Apropriado', 'Proibido conteúdo NSFW, gore ou qualquer material ofensivo.'),
+            ('3. Spam', 'Não faça spam ou flood nos canais.'),
+            ('4. Divulgação', 'Divulgação apenas nos canais permitidos.'),
+            ('5. Regras Específicas', 'Siga as diretrizes de cada canal e tema.'),
+        ]
+        for title, desc in rules:
+            rules_embed.add_field(name=title, value=desc, inline=False)
+        
         await rules_channel.send(embed=rules_embed)
 
 @bot.event
@@ -708,71 +697,86 @@ async def on_member_join(member):
     """Sistema automático de boas-vindas"""
     guild = member.guild
     
-    welcome_channel = discord.utils.get(guild.channels, name='👋┃boas-vindas') or \
-                     discord.utils.get(guild.channels, name='boas-vindas') or \
-                     discord.utils.get(guild.text_channels, name=lambda n: 'bem-vindo' in n or 'welcome' in n)
+    # Procurar canal de boas-vindas
+    welcome_channel = None
+    for channel in guild.text_channels:
+        if 'bem-vindo' in channel.name or 'boas-vindas' in channel.name:
+            welcome_channel = channel
+            break
     
-    if welcome_channel:
-        template = None
-        for t_name, t_data in bot.templates.items():
-            if discord.utils.get(guild.roles, name=t_data['roles'][0][0]):
-                template = t_data
-                break
+    if not welcome_channel:
+        return
+    
+    # Detectar tema pelo cargo principal
+    template = None
+    for t_name, t_data in bot.templates.items():
+        main_role_name = t_data['roles'][0][0]
+        if discord.utils.get(guild.roles, name=main_role_name):
+            template = t_data
+            break
+    
+    if template:
+        embed = discord.Embed(
+            title=f'{template["icon"]} Novo Membro!',
+            description=template['welcome_message'].format(member=member.mention),
+            color=template['color'],
+            timestamp=datetime.now()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        if template.get('welcome_image'):
+            embed.set_image(url=template['welcome_image'])
+        embed.set_footer(text=f'ID: {member.id}')
         
-        if template:
-            embed = discord.Embed(
-                title=f'{template["icon"]} Novo Membro!',
-                description=template['welcome_message'].format(member=member.mention),
-                color=template['color'],
-                timestamp=datetime.now()
+        await welcome_channel.send(embed=embed)
+        
+        # Enviar DM
+        try:
+            dm_embed = discord.Embed(
+                title=f'Bem-vindo ao {guild.name}!',
+                description=f'Obrigado por entrar em nosso servidor {template["icon"]}\n\nLeia as regras e aproveite!',
+                color=template['color']
             )
-            embed.set_thumbnail(url=member.display_avatar.url)
-            if template.get('welcome_image'):
-                embed.set_image(url=template['welcome_image'])
-            embed.set_footer(text=f'ID: {member.id}', icon_url=guild.icon.url if guild.icon else None)
-            
-            await welcome_channel.send(embed=embed)
-            
-            try:
-                dm_embed = discord.Embed(
-                    title=f'Bem-vindo ao {guild.name}!',
-                    description=f'Obrigado por entrar em nosso servidor {template["icon"]}\n\nLeia as regras e aproveite!',
-                    color=template['color']
-                )
-                await member.send(embed=dm_embed)
-            except:
-                pass
+            await member.send(embed=dm_embed)
+        except:
+            pass
 
 @bot.event
 async def on_member_remove(member):
     """Sistema de saída"""
     guild = member.guild
     
-    channel = discord.utils.get(guild.channels, name='👋┃boas-vindas') or \
-              discord.utils.get(guild.channels, name='logs-bot')
+    # Procurar canal
+    channel = None
+    for ch in guild.text_channels:
+        if 'bem-vindo' in ch.name or 'boas-vindas' in ch.name or 'logs' in ch.name:
+            channel = ch
+            break
     
-    if channel:
-        template = None
-        for t_name, t_data in bot.templates.items():
-            if discord.utils.get(guild.roles, name=t_data['roles'][0][0]):
-                template = t_data
-                break
-        
-        if template:
-            embed = discord.Embed(
-                title='👋 Adeus!',
-                description=template['leave_message'].format(member=str(member)),
-                color=discord.Color.red(),
-                timestamp=datetime.now()
-            )
-            embed.set_thumbnail(url=member.display_avatar.url)
-            await channel.send(embed=embed)
+    if not channel:
+        return
+    
+    # Detectar tema
+    template = None
+    for t_name, t_data in bot.templates.items():
+        if discord.utils.get(guild.roles, name=t_data['roles'][0][0]):
+            template = t_data
+            break
+    
+    if template:
+        embed = discord.Embed(
+            title='👋 Adeus!',
+            description=template['leave_message'].format(member=str(member)),
+            color=discord.Color.red(),
+            timestamp=datetime.now()
+        )
+        embed.set_thumbnail(url=member.display_avatar.url)
+        await channel.send(embed=embed)
 
 @bot.tree.command(name='temas', description='Lista todos os temas disponíveis')
 async def list_themes(interaction: discord.Interaction):
     embed = discord.Embed(
         title='🎨 Temas Disponíveis',
-        description='Escolha um tema ao usar `/createserver`',
+        description='Escolha um tema ao usar `/setupserver`',
         color=discord.Color.blue()
     )
     
@@ -785,6 +789,47 @@ async def list_themes(interaction: discord.Interaction):
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
+@bot.tree.command(name='limparserver', description='Limpa todos os canais e cargos do servidor (CUIDADO!)')
+@app_commands.describe(confirmar='Digite "SIM" para confirmar')
+async def clear_server(interaction: discord.Interaction, confirmar: str):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message('❌ Apenas administradores!', ephemeral=True)
+        return
+    
+    if confirmar.upper() != 'SIM':
+        await interaction.response.send_message(
+            '❌ Para confirmar, digite "SIM" no campo confirmar', 
+            ephemeral=True
+        )
+        return
+    
+    await interaction.response.defer(ephemeral=True)
+    
+    guild = interaction.guild
+    
+    try:
+        # Deletar canais
+        for channel in guild.channels:
+            try:
+                await channel.delete(reason='Limpeza do servidor')
+                await asyncio.sleep(0.5)
+            except:
+                pass
+        
+        # Deletar cargos (exceto @everyone e cargos do bot)
+        for role in guild.roles:
+            if role.name != '@everyone' and not role.managed:
+                try:
+                    await role.delete(reason='Limpeza do servidor')
+                    await asyncio.sleep(0.5)
+                except:
+                    pass
+        
+        await interaction.followup.send('✅ Servidor limpo com sucesso!', ephemeral=True)
+        
+    except Exception as e:
+        await interaction.followup.send(f'❌ Erro: {str(e)}', ephemeral=True)
+
 @bot.tree.command(name='addemoji', description='Adiciona emojis personalizados (Admin)')
 @app_commands.describe(
     imagem='Imagem do emoji (PNG/JPG)',
@@ -796,7 +841,7 @@ async def add_emoji(interaction: discord.Interaction, imagem: discord.Attachment
         return
     
     if not imagem.filename.endswith(('.png', '.jpg', '.jpeg', '.gif')):
-        await interaction.response.send_message('❌ Formato inválido! Use PNG, JPG ou GIF.', ephemeral=True)
+        await interaction.response.send_message('❌ Formato inválido!', ephemeral=True)
         return
     
     await interaction.response.defer(ephemeral=True)
@@ -812,19 +857,25 @@ async def add_emoji(interaction: discord.Interaction, imagem: discord.Attachment
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
         title='🤖 ServerCreator Bot',
-        description='Bot profissional para criação de servidores',
+        description='Bot profissional para configuração de servidores',
         color=discord.Color.blue()
     )
     
     embed.add_field(
-        name='🛠️ Criação',
-        value='`/createserver (tema) (nome)` - Cria servidor completo\n`/temas` - Lista temas disponíveis',
+        name='🛠️ Configuração',
+        value='`/setupserver (tema)` - Configura o servidor atual\n`/temas` - Lista temas disponíveis\n`/limparserver` - Limpa o servidor (CUIDADO!)',
         inline=False
     )
     
     embed.add_field(
-        name='⚙️ Gerenciamento',
+        name='⚙️ Utilitários',
         value='`/addemoji (imagem) (nome)` - Adiciona emoji\n`/ajuda` - Este menu',
+        inline=False
+    )
+    
+    embed.add_field(
+        name='📝 Como Usar',
+        value='1. Crie um servidor manualmente no Discord\n2. Adicione este bot ao servidor\n3. Use `/setupserver` e escolha o tema\n4. Pronto!',
         inline=False
     )
     
