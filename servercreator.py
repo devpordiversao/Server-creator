@@ -1,4 +1,4 @@
-# main.py - CORRIGIDO: Bot configura servidor existente (não cria)
+# main.py - ServerCreator Bot
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -6,17 +6,21 @@ import os
 from dotenv import load_dotenv
 import asyncio
 from datetime import datetime
+import re
 
 # Carregar variáveis de ambiente
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+
+# URL do site
+SITE_URL = "https://server-creator-site-production.up.railway.app/index.html"
 
 # Configurações do Bot
 intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
 intents.messages = True
-intents.message_content = True
+intents.message_content = True  # Necessário para detectar palavras-chave
 
 class ServerBot(commands.Bot):
     def __init__(self):
@@ -26,6 +30,7 @@ class ServerBot(commands.Bot):
             help_command=None
         )
         self.templates = self.load_templates()
+        self.site_keywords = ['site', 'website', 'pagina', 'página', 'dashboard', 'painel', 'html']
     
     def load_templates(self):
         """Carrega templates de servidores temáticos EXPANDIDOS"""
@@ -487,6 +492,85 @@ async def on_ready():
     )
     print(f'{bot.user} está online!')
 
+# ==================== COMANDO DASHBOARD ====================
+
+@bot.tree.command(name='dashboard', description='Acesse o site oficial do ServerCreator Bot')
+async def dashboard(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title='🌐 ServerCreator Dashboard',
+        description='Acesse nosso site oficial para mais informações!',
+        color=discord.Color.blurple(),
+        timestamp=datetime.now()
+    )
+    
+    embed.add_field(
+        name='🔗 Link do Site',
+        value=f'[Clique aqui para acessar]({SITE_URL})',
+        inline=False
+    )
+    
+    embed.add_field(
+        name='📋 O que você encontra no site:',
+        value='• Termos de Serviço\n• Política de Privacidade\n• Informações detalhadas sobre o bot\n• Links de convite e suporte',
+        inline=False
+    )
+    
+    embed.set_thumbnail(url='https://i.imgur.com/6fVO3QX.png')  # Avatar do bot
+    embed.set_footer(text='ServerCreator Bot • Desenvolvido por Aeth 🜲 ༝ TMZ')
+    
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+# ==================== SISTEMA DE PALAVRAS-CHAVE ====================
+
+@bot.event
+async def on_message(message):
+    # Ignorar mensagens do próprio bot
+    if message.author == bot.user:
+        return
+    
+    # Ignorar DMs
+    if not message.guild:
+        return
+    
+    # Converter mensagem para minúsculo para comparação
+    content_lower = message.content.lower()
+    
+    # Verificar se contém alguma palavra-chave do site
+    for keyword in bot.site_keywords:
+        # Usar regex para encontrar palavra completa (evitar "site" em "website" contar 2x)
+        pattern = r'\b' + re.escape(keyword) + r'\b'
+        if re.search(pattern, content_lower):
+            # Criar embed bonito
+            embed = discord.Embed(
+                title='🌐 Você mencionou o site!',
+                description='Parece que você está procurando informações sobre o ServerCreator.',
+                color=discord.Color.blurple()
+            )
+            
+            embed.add_field(
+                name='🔗 Acesse nosso site oficial:',
+                value=f'**[Clique aqui]({SITE_URL})**\n\nOu use o comando `/dashboard`',
+                inline=False
+            )
+            
+            embed.add_field(
+                name='📋 No site você encontra:',
+                value='• Termos de Serviço\n• Política de Privacidade\n• Detalhes sobre todos os temas\n• Informações do desenvolvedor',
+                inline=False
+            )
+            
+            embed.set_thumbnail(url='https://i.imgur.com/6fVO3QX.png')
+            embed.set_footer(text='ServerCreator Bot • Aeth 🜲 ༝ TMZ')
+            
+            # Enviar resposta mencionando o usuário
+            await message.reply(embed=embed, mention_author=False)
+            break  # Enviar apenas uma vez por mensagem
+    
+    # Processar comandos normais
+    await bot.process_commands(message)
+
+# ==================== COMANDOS PRINCIPAIS ====================
+
 @bot.tree.command(name='setupserver', description='Configura o servidor atual com um tema completo')
 @app_commands.describe(
     tema='Escolha o tema do servidor'
@@ -868,6 +952,12 @@ async def help_command(interaction: discord.Interaction):
     )
     
     embed.add_field(
+        name='🌐 Site & Informações',
+        value='`/dashboard` - Acessa o site oficial\nPalavras-chave: digite "site" em qualquer canal',
+        inline=False
+    )
+    
+    embed.add_field(
         name='⚙️ Utilitários',
         value='`/addemoji (imagem) (nome)` - Adiciona emoji\n`/ajuda` - Este menu',
         inline=False
@@ -879,7 +969,7 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
     
-    embed.set_footer(text='Desenvolvido com 💜')
+    embed.set_footer(text='Desenvolvido por Aeth 🜲 ༝ TMZ')
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
