@@ -1,4 +1,4 @@
-# main.py - ServerCreator Bot (CORRIGIDO)
+# main.py - ServerCreator Bot (VERSÃO COMPLETA COM SISTEMA DE SUGESTÕES AVANÇADO)
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -33,6 +33,7 @@ class ServerBot(commands.Bot):
         self.templates = self.load_templates()
         self.site_keywords = ['site', 'website', 'pagina', 'página', 'dashboard', 'painel', 'html']
         self.ticket_cooldowns = {}
+        self.suggestion_cooldowns = {}
     
     def load_templates(self):
         """Carrega templates de servidores temáticos EXPANDIDOS"""
@@ -568,6 +569,211 @@ async def on_ready():
     )
     print(f'{bot.user} está online!')
 
+# ==================== SISTEMA DE SUGESTÕES AVANÇADO ====================
+
+class SuggestionModal(discord.ui.Modal, title="💡 Enviar Sugestão"):
+    nickname = discord.ui.TextInput(
+        label="Seu Nick/Apelido",
+        placeholder="Como você gostaria de ser chamado?",
+        required=True,
+        max_length=50
+    )
+    
+    suggestion = discord.ui.TextInput(
+        label="Sua Sugestão",
+        placeholder="Descreva sua sugestão em detalhes...",
+        required=True,
+        max_length=1000,
+        style=discord.TextStyle.paragraph
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Verificar cooldown
+        cooldown_key = f"{interaction.user.id}_{interaction.guild.id}"
+        if cooldown_key in bot.suggestion_cooldowns:
+            last_suggestion = bot.suggestion_cooldowns[cooldown_key]
+            if (datetime.now() - last_suggestion).total_seconds() < 300:  # 5 minutos
+                await interaction.response.send_message(
+                    "⏳ Você já enviou uma sugestão recentemente! Aguarde 5 minutos.",
+                    ephemeral=True
+                )
+                return
+        
+        # Buscar canais
+        guild = interaction.guild
+        suggestions_channel = discord.utils.get(guild.text_channels, name="💡┃sugestões")
+        send_suggestion_channel = discord.utils.get(guild.text_channels, name="💌┃enviar-sugestão")
+        
+        if not suggestions_channel:
+            await interaction.response.send_message(
+                "❌ Canal de sugestões não encontrado! Contate um administrador.",
+                ephemeral=True
+            )
+            return
+        
+        # Criar embed da sugestão
+        embed = discord.Embed(
+            title="💡 Nova Sugestão Recebida",
+            description=f"```{self.suggestion.value}```",
+            color=discord.Color.blurple(),
+            timestamp=datetime.now()
+        )
+        
+        embed.set_author(
+            name=self.nickname.value,
+            icon_url=interaction.user.display_avatar.url
+        )
+        
+        embed.set_footer(text=f"ID: {interaction.user.id} • Use os botões abaixo para gerenciar")
+        
+        # Enviar para o canal de sugestões
+        suggestion_msg = await suggestions_channel.send(
+            content=f"📩 Sugestão de {interaction.user.mention}",
+            embed=embed
+        )
+        
+        # Adicionar reações (emojis)
+        await suggestion_msg.add_reaction("👍")
+        await suggestion_msg.add_reaction("👎")
+        await suggestion_msg.add_reaction("🤔")
+        
+        # Enviar DM para o dono do bot (você)
+        try:
+            owner = await bot.fetch_user(ADMIN_USER_ID)  # Substitua pelo seu ID
+            if owner:
+                dm_embed = discord.Embed(
+                    title="💡 Nova Sugestão Recebida",
+                    description=f"```{self.suggestion.value}```",
+                    color=discord.Color.blurple(),
+                    timestamp=datetime.now()
+                )
+                dm_embed.set_author(
+                    name=f"{self.nickname.value} ({interaction.user.name})",
+                    icon_url=interaction.user.display_avatar.url
+                )
+                dm_embed.add_field(
+                    name="📍 Servidor",
+                    value=f"{guild.name} ({guild.id})",
+                    inline=True
+                )
+                dm_embed.add_field(
+                    name="👤 Usuário",
+                    value=f"{interaction.user.mention} ({interaction.user.id})",
+                    inline=True
+                )
+                dm_embed.add_field(
+                    name="🔗 Link",
+                    value=f"[Ir para a sugestão]({suggestion_msg.jump_url})",
+                    inline=False
+                )
+                
+                # Criar view com botões Aceitar/Recusar
+                view = SuggestionDecisionView(
+                    suggestion_msg.id,
+                    interaction.user.id,
+                    self.nickname.value,
+                    self.suggestion.value,
+                    interaction.user.display_avatar.url
+                )
+                
+                await owner.send(embed=dm_embed, view=view)
+        except Exception as e:
+            print(f"Erro ao enviar DM: {e}")
+        
+        # Registrar cooldown
+        bot.suggestion_cooldowns[cooldown_key] = datetime.now()
+        
+        # Confirmar ao usuário
+        await interaction.response.send_message(
+            "✅ Sua sugestão foi enviada com sucesso! Obrigado por contribuir.",
+            ephemeral=True
+        )
+
+class SuggestionDecisionView(discord.ui.View):
+    def __init__(self, message_id, user_id, nickname, suggestion, avatar_url):
+        super().__init__(timeout=None)
+        self.message_id = message_id
+        self.user_id = user_id
+        self.nickname = nickname
+        self.suggestion = suggestion
+        self.avatar_url = avatar_url
+    
+    @discord.ui.button(label="✅ Aceitar", style=discord.ButtonStyle.green, custom_id="accept_suggestion")
+    async def accept_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.process_decision(interaction, "accepted")
+    
+    @discord.ui.button(label="❌ Recusar", style=discord.ButtonStyle.red, custom_id="reject_suggestion")
+    async def reject_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.process_decision(interaction, "rejected")
+    
+    async def process_decision(self, interaction: discord.Interaction, decision: str):
+        # Buscar canais em todos os servidores onde o bot está
+        for guild in bot.guilds:
+            if decision == "accepted":
+                target_channel = discord.utils.get(guild.text_channels, name="✅┃sugestões-aceitas")
+                color = discord.Color.green()
+                title = "✅ Sugestão Aceita"
+                status = "Aceita"
+            else:
+                target_channel = discord.utils.get(guild.text_channels, name="❌┃sugestões-recusadas")
+                color = discord.Color.red()
+                title = "❌ Sugestão Recusada"
+                status = "Recusada"
+            
+            if target_channel:
+                embed = discord.Embed(
+                    title=title,
+                    description=f"```{self.suggestion}```",
+                    color=color,
+                    timestamp=datetime.now()
+                )
+                embed.set_author(
+                    name=self.nickname,
+                    icon_url=self.avatar_url
+                )
+                embed.set_footer(text=f"Avaliada por {interaction.user.name}")
+                
+                await target_channel.send(embed=embed)
+        
+        # Notificar o usuário que sugeriu
+        try:
+            user = await bot.fetch_user(self.user_id)
+            if user:
+                dm_embed = discord.Embed(
+                    title=f"📢 Sua sugestão foi {status.lower()}!",
+                    description=f"```{self.suggestion}```",
+                    color=color
+                )
+                dm_embed.add_field(
+                    name="📊 Status",
+                    value=f"Sua sugestão foi **{status}** pela equipe.",
+                    inline=False
+                )
+                await user.send(embed=dm_embed)
+        except Exception as e:
+            print(f"Erro ao notificar usuário: {e}")
+        
+        # Desabilitar botões
+        for child in self.children:
+            child.disabled = True
+        
+        await interaction.response.edit_message(view=self)
+        await interaction.followup.send(f"✅ Sugestão {status.lower()} com sucesso!", ephemeral=True)
+
+class SuggestionButtonView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    
+    @discord.ui.button(
+        label="💡 Enviar Sugestão",
+        style=discord.ButtonStyle.blurple,
+        custom_id="send_suggestion_button",
+        emoji="💡"
+    )
+    async def suggestion_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = SuggestionModal()
+        await interaction.response.send_modal(modal)
+
 # ==================== SISTEMA DE TICKETS ====================
 
 class TicketView(discord.ui.View):
@@ -1040,7 +1246,7 @@ async def setup_suporte(interaction: discord.Interaction):
     )
     warning_embed.add_field(
         name="📋 O que será criado:",
-        value="• 24 canais de texto\n• 10 canais de voz\n• 22 cargos\n• Sistema de tickets com dropdown\n• Canais de Termos, Privacidade, Site e FAQ",
+        value="• 24 canais de texto\n• 10 canais de voz\n• 22 cargos\n• Sistema de tickets com dropdown\n• Canais de Termos, Privacidade, Site e FAQ\n• Sistema de Sugestões Avançado",
         inline=False
     )
     warning_embed.add_field(
@@ -1072,12 +1278,17 @@ async def setup_suporte(interaction: discord.Interaction):
                 )
                 success_embed.add_field(
                     name="✅ Criado com sucesso:",
-                    value="• Canais de Termos, Privacidade, Site e FAQ\n• Sistema de Tickets com dropdown\n• 22 cargos de suporte\n• Canais de voz e texto organizados",
+                    value="• Canais de Termos, Privacidade, Site e FAQ\n• Sistema de Tickets com dropdown\n• 22 cargos de suporte\n• Canais de voz e texto organizados\n• Sistema de Sugestões com botão e modal\n• Canais de Sugestões Aceitas/Recusadas",
                     inline=False
                 )
                 success_embed.add_field(
                     name="🎫 Sistema de Tickets",
                     value="O canal 🎫┃criar-ticket já está funcionando com dropdown!",
+                    inline=False
+                )
+                success_embed.add_field(
+                    name="💡 Sistema de Sugestões",
+                    value="O canal 💌┃enviar-sugestão está pronto com botão azul!\nAs sugestões vão para 💡┃sugestões com reações.",
                     inline=False
                 )
                 success_embed.set_footer(text="ServerCreator Suporte • Aeth 🜲 ༝ TMZ")
@@ -1141,6 +1352,7 @@ async def configure_support_guild(guild: discord.Guild, template: dict, admin_us
     cat_comunidade = await guild.create_category('💬 COMUNIDADE', reason='Configuração suporte')
     cat_voz = await guild.create_category('🔊 VOZ', reason='Configuração suporte')
     cat_staff = await guild.create_category('🔒 STAFF ONLY', reason='Configuração suporte')
+    cat_sugestoes = await guild.create_category('💡 SUGESTÕES', reason='Configuração suporte')
     
     await asyncio.sleep(1)
     
@@ -1240,7 +1452,7 @@ async def configure_support_guild(guild: discord.Guild, template: dict, admin_us
         ("🔒 É seguro dar permissão de Admin?", "Sim, o bot precisa criar canais e cargos. Nunca abusamos das permissões."),
         ("🎨 Quantos temas existem?", "6 temas: RPG, Loja, Comunidade, Jogos, Estudos e Anime."),
         ("📊 Quantos canais são criados?", "24+ canais de texto e 10 canais de voz por tema."),
-        ("👥 Posso sugerir novos temas?", "Sim! Use o canal 💡┃sugestões ou abra um ticket."),
+        ("👥 Posso sugerir novos temas?", "Sim! Use o canal 💌┃enviar-sugestão ou abra um ticket."),
         ("🐛 Encontrei um bug, e agora?", "Abra um ticket em 🎫┃criar-ticket selecionando 'Reportar Bug'."),
         ("🤝 Como faço parceria?", "Abra um ticket do tipo 'Parceria' e descreva sua proposta."),
         ("⚡ O bot está offline?", "Verifique 🔧┃status-bot ou aguarde reinicialização."),
@@ -1287,11 +1499,124 @@ async def configure_support_guild(guild: discord.Guild, template: dict, admin_us
     view = TicketView()
     await ticket_channel.send(embed=ticket_embed, view=view)
     
+    # NOVOS CANAIS - Sistema de Sugestões Avançado
+    
+    # Canal Enviar Sugestão (com botão)
+    send_suggestion_channel = await guild.create_text_channel(
+        '💌┃enviar-sugestão',
+        category=cat_sugestoes,
+        topic='Clique no botão abaixo para enviar sua sugestão'
+    )
+    
+    # Configurar permissões - apenas visualização e reações
+    await send_suggestion_channel.set_permissions(
+        guild.default_role,
+        send_messages=False,
+        add_reactions=True,
+        read_messages=True,
+        read_message_history=True
+    )
+    
+    suggestion_embed = discord.Embed(
+        title="💡 Envie sua Sugestão",
+        description="Tem uma ideia para melhorar o bot ou o servidor?\nClique no botão azul abaixo para enviar sua sugestão!",
+        color=discord.Color.blurple()
+    )
+    suggestion_embed.add_field(
+        name="📋 Como funciona:",
+        value="1. Clique no botão '💡 Enviar Sugestão'\n2. Preencha seu nick e a sugestão\n3. Aguarde a avaliação da equipe\n4. Receba feedback via DM!",
+        inline=False
+    )
+    suggestion_embed.add_field(
+        name="⚠️ Regras:",
+        value="• Seja respeitoso e construtivo\n• Uma sugestão a cada 5 minutos\n• Sugestões inapropriadas serão ignoradas",
+        inline=False
+    )
+    suggestion_embed.set_thumbnail(url='https://i.imgur.com/6fVO3QX.png')
+    suggestion_embed.set_footer(text='ServerCreator Suporte • Sua opinião é importante!')
+    
+    # Enviar com botão
+    suggestion_view = SuggestionButtonView()
+    await send_suggestion_channel.send(embed=suggestion_embed, view=suggestion_view)
+    
+    # Canal Sugestões (onde aparecem as sugestões enviadas)
+    suggestions_channel = await guild.create_text_channel(
+        '💡┃sugestões',
+        category=cat_sugestoes,
+        topic='Sugestões enviadas pelos membros'
+    )
+    
+    # Configurar permissões - apenas visualização e reações
+    await suggestions_channel.set_permissions(
+        guild.default_role,
+        send_messages=False,
+        add_reactions=True,
+        read_messages=True,
+        read_message_history=True
+    )
+    
+    # Canal Sugestões Aceitas
+    accepted_channel = await guild.create_text_channel(
+        '✅┃sugestões-aceitas',
+        category=cat_sugestoes,
+        topic='Sugestões que foram implementadas ou aprovadas'
+    )
+    
+    await accepted_channel.set_permissions(
+        guild.default_role,
+        send_messages=False,
+        add_reactions=True,
+        read_messages=True,
+        read_message_history=True
+    )
+    
+    # Canal Sugestões Recusadas
+    rejected_channel = await guild.create_text_channel(
+        '❌┃sugestões-recusadas',
+        category=cat_sugestoes,
+        topic='Sugestões que não foram aprovadas'
+    )
+    
+    await rejected_channel.set_permissions(
+        guild.default_role,
+        send_messages=False,
+        add_reactions=True,
+        read_messages=True,
+        read_message_history=True
+    )
+    
+    # Canal de Votações (com permissão de reação)
+    votacoes_channel = await guild.create_text_channel(
+        '📢┃votações',
+        category=cat_comunidade,
+        topic='Participe das votações da comunidade'
+    )
+    
+    await votacoes_channel.set_permissions(
+        guild.default_role,
+        send_messages=False,
+        add_reactions=True,
+        read_messages=True,
+        read_message_history=True
+    )
+    
+    # Enviar mensagem inicial no canal de votações
+    votacoes_embed = discord.Embed(
+        title="📢 Canal de Votações",
+        description="Aqui serão postadas enquetes e votações importantes para a comunidade!",
+        color=discord.Color.gold()
+    )
+    votacoes_embed.add_field(
+        name="🗳️ Como participar:",
+        value="Reaja com os emojis disponíveis em cada votação para expressar sua opinião!",
+        inline=False
+    )
+    await votacoes_channel.send(embed=votacoes_embed)
+    
     # Outros canais básicos
     outros_canais = [
         ('📢┃anúncios', cat_info, 'Anúncios oficiais'),
         ('🎉┃novidades', cat_info, 'Novidades do bot'),
-        ('💡┃sugestões', cat_comunidade, 'Sugestões da comunidade'),
         ('🐛┃bugs', cat_comunidade, 'Reporte de bugs'),
         ('💬┃geral', cat_comunidade, 'Chat geral'),
         ('🎨┃showcase', cat_comunidade, 'Mostre seus servidores'),
@@ -1307,11 +1632,21 @@ async def configure_support_guild(guild: discord.Guild, template: dict, admin_us
         ('💻┃desenvolvimento', cat_staff, 'Avisos de dev'),
         ('🎯┃metas', cat_comunidade, 'Metas da comunidade'),
         ('🏆┃destaques', cat_comunidade, 'Membros em destaque'),
-        ('📢┃votações', cat_comunidade, 'Enquetes da comunidade'),
     ]
     
     for nome, categoria, topico in outros_canais:
-        await guild.create_text_channel(nome, category=categoria, topic=topico)
+        ch = await guild.create_text_channel(nome, category=categoria, topic=topico)
+        
+        # Configurar canais de informações como somente leitura para @everyone
+        if any(x in nome for x in ['📢┃anúncios', '📜┃termos', '🔒┃política', '🌐┃site', '❓┃faq', '📋┃regras', '🤖┃comandos', '📝┃changelog', '📊┃estatísticas', '🔧┃status']):
+            await ch.set_permissions(
+                guild.default_role,
+                send_messages=False,
+                add_reactions=True,
+                read_messages=True,
+                read_message_history=True
+            )
+        
         await asyncio.sleep(0.5)
     
     # Canais de voz
@@ -1550,6 +1885,9 @@ async def on_member_remove(member):
         )
         embed.set_thumbnail(url=member.display_avatar.url)
         await channel.send(embed=embed)
+
+# ID do dono do bot (substitua pelo seu ID do Discord)
+ADMIN_USER_ID = 123456789012345678  # <-- SUBSTITUA PELO SEU ID DO DISCORD
 
 # Run the bot
 if __name__ == '__main__':
