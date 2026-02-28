@@ -1,4 +1,4 @@
-# main.py
+# main.py - CORRIGIDO
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -85,10 +85,10 @@ class ServerBot(commands.Bot):
                     ('❄️ Clérigo', discord.Color.teal(), [], False),
                     ('🌿 Druida', discord.Color.dark_green(), [], False),
                     ('⚡ Bárbaro', discord.Color.orange(), [], False),
-                    ('🎭 Bardo', discord.Color.pink(), [], False),
+                    ('🎭 Bardo', discord.Color.magenta(), [], False),
                     ('💀 Necromante', discord.Color.dark_red(), [], False),
                     ('🛡️ Guerreiro', discord.Color.dark_blue(), [], False),
-                    ('🔮 Vidente', discord.Color.magenta(), [], False),
+                    ('🔮 Vidente', discord.Color.purple(), [], False),
                     ('🐉 Domador', discord.Color.gold(), [], False),
                     ('📜 Escriba', discord.Color.light_grey(), [], False),
                     ('🎨 Artífice', discord.Color.blurple(), [], False),
@@ -309,7 +309,7 @@ class ServerBot(commands.Bot):
                     ('📺 Streamer', discord.Color.magenta(), [], False),
                     ('🎬 Criador Conteúdo', discord.Color.from_rgb(255, 0, 255), [], False),
                     ('🏆 Campeão', discord.Color.gold(), [], False),
-                    ('🥈 Elite', discord.Color.silver(), [], False),
+                    ('🥈 Elite', discord.Color.from_rgb(192, 192, 192), [], False),  # CORRIGIDO: silver -> from_rgb
                     ('🥉 Competitivo', discord.Color.from_rgb(205, 127, 50), [], False),
                     ('🎯 Tryhard', discord.Color.dark_red(), [], False),
                     ('🎮 Gamer', discord.Color.blue(), [], False),
@@ -445,7 +445,7 @@ class ServerBot(commands.Bot):
                     ('🎌 Sensei', discord.Color.orange(), ['manage_messages'], False),
                     ('⚡ Protagonista', discord.Color.yellow(), [], False),
                     ('😈 Vilão', discord.Color.dark_purple(), [], False),
-                    ('🗡️ Espadachim', discord.Color.silver(), [], False),
+                    ('🗡️ Espadachim', discord.Color.from_rgb(192, 192, 192), [], False),  # CORRIGIDO: silver -> from_rgb
                     ('🔥 Super Sayajin', discord.Color.gold(), [], False),
                     ('❄️ Shinigami', discord.Color.dark_blue(), [], False),
                     ('🍥 Ninja', discord.Color.orange(), [], False),
