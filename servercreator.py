@@ -5,7 +5,6 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 import asyncio
-import json
 from datetime import datetime
 
 # Carregar variáveis de ambiente
@@ -29,225 +28,443 @@ class ServerBot(commands.Bot):
         self.templates = self.load_templates()
     
     def load_templates(self):
-        """Carrega templates de servidores temáticos"""
+        """Carrega templates de servidores temáticos EXPANDIDOS"""
         return {
             'rpg': {
                 'icon': '🎲',
                 'color': discord.Color.dark_purple(),
-                'description': 'Servidor temático para RPG e mesas de jogo',
+                'description': 'Servidor temático completo para RPG de mesa',
                 'channels': {
                     'texto': [
-                        ('📜┃regras', 'Regras e diretrizes do servidor'),
+                        ('📜┃regras-gerais', 'Regras e diretrizes do servidor'),
+                        ('📢┃anúncios', 'Anúncios importantes'),
                         ('🎭┃apresentações', 'Apresente seu personagem'),
-                        ('🗺️┃mundo-rpg', 'Lore e história do mundo'),
-                        ('🎲┃mesa-1', 'Mesa de RPG 1'),
-                        ('🎲┃mesa-2', 'Mesa de RPG 2'),
-                        ('🎲┃mesa-3', 'Mesa de RPG 3'),
-                        ('💬┃off-topic', 'Conversas gerais'),
-                        ('🎨┃artes', 'Compartilhe artes e tokens'),
-                        ('📚┃recursos', 'Livros e recursos de RPG'),
+                        ('🗺️┃lore-mundo', 'História e lore do mundo'),
+                        ('📚┃bestiário', 'Criaturas e monstros'),
+                        ('🎲┃mesa-principal', 'Mesa de RPG principal'),
+                        ('🎲┃mesa-secundária', 'Mesa secundária'),
+                        ('🎲┃mesa-aventura', 'Mesa de aventuras'),
+                        ('🎲┃mesa-one-shot', 'One-shots e sessões únicas'),
+                        ('🎲┃mesa-campanha', 'Campanha principal'),
+                        ('💬┃chat-rpg', 'Conversas sobre RPG'),
+                        ('🎨┃artes-personagens', 'Artes e tokens'),
+                        ('📖┃homebrew', 'Conteúdo caseiro'),
+                        ('🎵┃músicas-ambiente', 'Trilhas sonoras'),
+                        ('🎬┃streams-sessões', 'Transmissões de jogos'),
+                        ('📊┃dados-estatísticas', 'Rolagens e stats'),
+                        ('🛒┃comércio-ig', 'Lojas dentro do jogo'),
+                        ('🏰┃guildas-facções', 'Grupos e organizações'),
+                        ('📜┃missões', 'Board de missões'),
+                        ('💀┃cemitério-perso', 'Personagens falecidos'),
+                        ('🎪┃eventos-especiais', 'Eventos e festivais'),
+                        ('📝┃fichas-personagens', 'Fichas dos players'),
+                        ('🤝┃recrutamento-mesas', 'Procurando grupo'),
+                        ('🔮┃previsões-oráculo', 'Previsões do destino'),
                     ],
                     'voz': [
-                        ('🎙️┃Mesa Principal', None),
-                        ('🎙️┃Mesa Secundária', None),
-                        ('🎙️┃Mesa Privada', 4),
-                        ('🎧┃Música & Ambiente', None),
+                        ('🎙️┃Mesa do Mestre', None),
+                        ('🎙️┃Aventura 1', None),
+                        ('🎙️┃Aventura 2', None),
+                        ('🎙️┃Aventura 3', None),
+                        ('🎙️┃Campanha Principal', None),
+                        ('🎙️┃One-Shot', 6),
+                        ('🎧┃Música Ambiente', None),
+                        ('🔒┃Sala Privada 1', 3),
+                        ('🔒┃Sala Privada 2', 3),
+                        ('🎪┃Eventos Especiais', None),
                     ]
                 },
                 'roles': [
-                    ('🎮 Mestre', discord.Color.gold(), ['administrator'], True),
-                    ('🧙‍♂️ Jogador', discord.Color.blue(), ['send_messages', 'connect'], False),
+                    ('👑 Mestre Supremo', discord.Color.gold(), ['administrator'], True),
+                    ('🎲 Mestre Narrador', discord.Color.dark_gold(), ['manage_messages', 'mute_members'], True),
+                    ('🧙‍♂️ Arquimago', discord.Color.purple(), ['manage_messages'], False),
+                    ('⚔️ Paladino', discord.Color.blue(), ['kick_members'], False),
+                    ('🏹 Ranger', discord.Color.green(), ['priority_speaker'], False),
+                    ('🗡️ Ladino', discord.Color.dark_grey(), [], False),
+                    ('🔥 Mago', discord.Color.red(), [], False),
+                    ('❄️ Clérigo', discord.Color.teal(), [], False),
+                    ('🌿 Druida', discord.Color.dark_green(), [], False),
+                    ('⚡ Bárbaro', discord.Color.orange(), [], False),
+                    ('🎭 Bardo', discord.Color.pink(), [], False),
+                    ('💀 Necromante', discord.Color.dark_red(), [], False),
+                    ('🛡️ Guerreiro', discord.Color.dark_blue(), [], False),
+                    ('🔮 Vidente', discord.Color.magenta(), [], False),
+                    ('🐉 Domador', discord.Color.gold(), [], False),
+                    ('📜 Escriba', discord.Color.light_grey(), [], False),
+                    ('🎨 Artífice', discord.Color.blurple(), [], False),
+                    ('🍺 Alquimista', discord.Color.from_rgb(139, 69, 19), [], False),
+                    ('⭐ Aventureiro VIP', discord.Color.from_rgb(255, 215, 0), [], False),
+                    ('🎒 Aventureiro', discord.Color.from_rgb(100, 149, 237), [], False),
                     ('👀 Espectador', discord.Color.greyple(), ['view_channel'], False),
-                    ('🎨 Artista', discord.Color.purple(), ['attach_files'], False),
-                    ('📖 Narrador', discord.Color.dark_green(), ['manage_messages'], False),
+                    ('🤖 Bot Sistema', discord.Color.from_rgb(32, 34, 37), ['send_messages'], False),
                 ],
-                'welcome_message': 'Bem-vindo à aventura, {member}! 🎲\nPrepare seus dados e que a sorte esteja com você!',
-                'leave_message': '{member} deixou a party. Que seus dados rolem bem onde estiver! 👋',
-                'welcome_image': 'https://i.imgur.com/rpg_welcome.png',  # Substitua por sua imagem
+                'welcome_message': '🎲 {member} entrou na party! Rolem iniciativa e preparem os dados!',
+                'leave_message': '👋 {member} deixou a mesa. Que seus dados rolem nat 20 onde estiver!',
+                'welcome_image': 'https://i.imgur.com/rpg_welcome.png',
             },
             
             'loja': {
                 'icon': '🛒',
                 'color': discord.Color.green(),
-                'description': 'Servidor para e-commerce e vendas',
+                'description': 'Servidor completo para e-commerce e vendas',
                 'channels': {
                     'texto': [
-                        ('📋┃regras', 'Regras da loja'),
-                        ('🛍️┃catálogo', 'Nossos produtos'),
+                        ('📋┃regras-loja', 'Regras e termos de uso'),
+                        ('📢┃novidades', 'Lançamentos e novidades'),
+                        ('🛍️┃catálogo-geral', 'Todos os produtos'),
+                        ('👕┃roupas', 'Vestuário e moda'),
+                        ('👟┃calçados', 'Tênis e sapatos'),
+                        ('💻┃eletrônicos', 'Tecnologia e gadgets'),
+                        ('🏠┃casa-decoração', 'Utilidades domésticas'),
+                        ('🎮┃games', 'Jogos e consoles'),
+                        ('📚┃livros', 'Livros e materiais'),
+                        ('🎨┃arte-design', 'Produtos artísticos'),
                         ('💰┃promoções', 'Ofertas especiais'),
-                        ('🎫┃suporte', 'Atendimento ao cliente'),
-                        ('⭐┃avaliações', 'Feedback dos clientes'),
-                        ('📦┃rastreamento', 'Status dos pedidos'),
-                        ('💬┃chat-geral', 'Converse com a comunidade'),
+                        ('🎫┃cupons', 'Códigos de desconto'),
+                        ('📦┃rastreamento', 'Status de entregas'),
+                        ('🎁┃brindes', 'Produtos gratuitos'),
+                        ('⭐┃avaliações', 'Reviews dos clientes'),
+                        ('💬┃suporte-chat', 'Atendimento rápido'),
+                        ('🎫┃tickets', 'Suporte técnico'),
                         ('🤝┃parcerias', 'Propostas comerciais'),
+                        ('📊┃vendas-live', 'Vendas ao vivo'),
+                        ('💳┃pagamentos', 'Dúvidas sobre pagamento'),
+                        ('🚚┃entregas', 'Informações de envio'),
+                        ('🔄┃trocas-devoluções', 'Política de trocas'),
+                        ('👥┃afiliados', 'Programa de afiliados'),
+                        ('📈┃relatórios', 'Dados e estatísticas'),
                     ],
                     'voz': [
-                        ('🎧┃Suporte Voz', None),
-                        ('💼┃Reuniões', 5),
+                        ('🎧┃Atendimento 1', None),
+                        ('🎧┃Atendimento 2', None),
+                        ('🎧┃Suporte VIP', None),
+                        ('💼┃Reuniões', 8),
+                        ('📊┃Vendas Live', None),
+                        ('🎙️┃Podcast Loja', None),
+                        ('🔒┃Staff Only', 5),
+                        ('🎵┃Espera Musical', None),
+                        ('📞┃SAC', 2),
+                        ('🤝┃Negociações', 4),
                     ]
                 },
                 'roles': [
-                    ('👑 Dono', discord.Color.gold(), ['administrator'], True),
-                    ('🛍️ Cliente VIP', discord.Color.purple(), ['send_messages'], False),
-                    ('💼 Vendedor', discord.Color.blue(), ['manage_messages'], False),
-                    ('📦 Estoque', discord.Color.orange(), ['attach_files'], False),
-                    ('⭐ Cliente', discord.Color.green(), ['send_messages'], False),
-                    ('🤖 Bot', discord.Color.greyple(), ['send_messages'], False),
+                    ('👑 CEO', discord.Color.gold(), ['administrator'], True),
+                    ('💼 Gerente', discord.Color.dark_gold(), ['manage_messages', 'kick_members'], True),
+                    ('🛍️ Supervisor', discord.Color.orange(), ['manage_messages'], False),
+                    ('💰 Vendedor Ouro', discord.Color.gold(), [], False),
+                    ('🥈 Vendedor Prata', discord.Color.light_grey(), [], False),
+                    ('🥉 Vendedor Bronze', discord.Color.from_rgb(205, 127, 50), [], False),
+                    ('📦 Estoquista', discord.Color.blue(), [], False),
+                    ('🎨 Designer', discord.Color.purple(), [], False),
+                    ('📱 Social Media', discord.Color.pink(), [], False),
+                    ('💻 Dev Site', discord.Color.dark_blue(), [], False),
+                    ('🚚 Entregador', discord.Color.green(), [], False),
+                    ('🎫 Suporte N1', discord.Color.teal(), [], False),
+                    ('🎫 Suporte N2', discord.Color.dark_teal(), [], False),
+                    ('⭐ Cliente VIP', discord.Color.from_rgb(255, 215, 0), [], False),
+                    ('💎 Cliente Premium', discord.Color.purple(), [], False),
+                    ('🛒 Cliente Frequente', discord.Color.blue(), [], False),
+                    ('👤 Cliente Novo', discord.Color.green(), [], False),
+                    ('👀 Visitante', discord.Color.greyple(), ['view_channel'], False),
+                    ('🤖 Bot Loja', discord.Color.from_rgb(32, 34, 37), [], False),
+                    ('📢 Anunciante', discord.Color.red(), [], False),
+                    ('🎁 Sorteador', discord.Color.magenta(), [], False),
+                    ('💳 Financeiro', discord.Color.dark_green(), [], False),
                 ],
-                'welcome_message': 'Bem-vindo à nossa loja, {member}! 🛒\nConfira nosso catálogo e aproveite as ofertas!',
-                'leave_message': '{member} saiu da loja. Volte sempre! 👋',
+                'welcome_message': '🛒 Bem-vindo à loja, {member}! Confira nossas ofertas e aproveite!',
+                'leave_message': '👋 {member} saiu da loja. Volte sempre para mais ofertas!',
                 'welcome_image': 'https://i.imgur.com/shop_welcome.png',
             },
             
             'comunidade': {
                 'icon': '🌐',
                 'color': discord.Color.blue(),
-                'description': 'Servidor para comunidades e grupos de amigos',
+                'description': 'Servidor completo para comunidades e grupos sociais',
                 'channels': {
                     'texto': [
                         ('📜┃regras', 'Regras da comunidade'),
+                        ('📢┃anúncios', 'Anúncios oficiais'),
                         ('👋┃boas-vindas', 'Apresente-se aqui!'),
                         ('💬┃chat-geral', 'Conversa livre'),
-                        ('🎨┃arte', 'Compartilhe suas criações'),
-                        ('🎵┃música', 'Compartilhe suas músicas'),
-                        ('🎮┃games', 'Encontre players'),
-                        ('📺┃anime-manga', 'Discussões otaku'),
+                        ('🎨┃arte-criações', 'Mostre sua arte'),
+                        ('🎵┃música', 'Compartilhe músicas'),
+                        ('🎮┃gaming', 'Jogos e players'),
+                        ('📺┃anime-mangá', 'Cultura otaku'),
+                        ('🎬┃filmes-séries', 'Cinema e TV'),
+                        ('📚┃literatura', 'Livros e leituras'),
+                        ('🍕┃culinária', 'Comidas e receitas'),
+                        ('🏋️┃fitness', 'Saúde e exercícios'),
+                        ('💻┃tecnologia', 'Tech e programação'),
+                        ('🎓┃estudos', 'Ajuda acadêmica'),
+                        ('💼┃trabalho', 'Empregos e carreira'),
                         ('🏆┃eventos', 'Eventos da comunidade'),
-                        ('📢┃anúncios', 'Novidades importantes'),
-                        ('🤖┃bots', 'Comandos dos bots'),
+                        ('🎉┃sorteios', 'Premiações'),
+                        ('🤝┃parcerias', 'Colaborações'),
+                        ('💡┃sugestões', 'Ideias para o servidor'),
+                        ('😂┃memes', 'Zoeira e humor'),
+                        ('🐶┃pets', 'Animais de estimação'),
+                        ('🌿┃natureza', 'Fotos da natureza'),
+                        ('✈️┃viagens', 'Turismo e lugares'),
+                        ('🎭┃roleplay', 'Interpretação de personagens'),
                     ],
                     'voz': [
                         ('🎙️┃Geral 1', None),
                         ('🎙️┃Geral 2', None),
+                        ('🎙️┃Geral 3', None),
                         ('🎵┃Música', None),
-                        ('🎮┃Gaming', None),
-                        ('🔒┃Privado', 2),
+                        ('🎮┃Gaming Squad', 5),
+                        ('🎮┃Gaming Duo', 2),
+                        ('📺┃Assistindo Junto', None),
+                        ('🔒┃Amigos 1', 3),
+                        ('🔒┃Amigos 2', 3),
+                        ('🎧┃AFK', None),
                     ]
                 },
                 'roles': [
                     ('👑 Fundador', discord.Color.gold(), ['administrator'], True),
-                    ('🛡️ Moderador', discord.Color.red(), ['kick_members', 'manage_messages'], False),
-                    ('⭐ Membro VIP', discord.Color.purple(), ['send_messages'], False),
-                    ('🎨 Artista', discord.Color.pink(), ['attach_files'], False),
-                    ('🎮 Gamer', discord.Color.dark_blue(), ['connect'], False),
-                    ('👥 Membro', discord.Color.blue(), ['send_messages'], False),
+                    ('🛡️ Admin', discord.Color.red(), ['ban_members', 'manage_messages'], True),
+                    ('⚔️ Moderador', discord.Color.orange(), ['kick_members', 'manage_messages'], False),
+                    ('🎨 Designer', discord.Color.purple(), [], False),
+                    ('🎵 DJ', discord.Color.magenta(), ['priority_speaker'], False),
+                    ('🎮 Pro Player', discord.Color.dark_blue(), [], False),
+                    ('🎬 Cineasta', discord.Color.dark_red(), [], False),
+                    ('📚 Escritor', discord.Color.teal(), [], False),
+                    ('🍕 Chef', discord.Color.from_rgb(255, 140, 0), [], False),
+                    ('💻 Developer', discord.Color.dark_green(), [], False),
+                    ('🏆 Organizador', discord.Color.gold(), [], False),
+                    ('🎉 Animador', discord.Color.pink(), [], False),
+                    ('📱 Influencer', discord.Color.blue(), [], False),
+                    ('🎭 Roleplayer', discord.Color.dark_purple(), [], False),
+                    ('📸 Fotógrafo', discord.Color.from_rgb(64, 224, 208), [], False),
+                    ('🎓 Mentor', discord.Color.green(), [], False),
+                    ('⭐ Membro Antigo', discord.Color.from_rgb(255, 215, 0), [], False),
+                    ('💎 Membro VIP', discord.Color.purple(), [], False),
+                    ('🎭 Membro Ativo', discord.Color.blurple(), [], False),
+                    ('👥 Membro', discord.Color.blue(), [], False),
+                    ('🌱 Novato', discord.Color.green(), [], False),
+                    ('👀 Visitante', discord.Color.greyple(), ['view_channel'], False),
                 ],
-                'welcome_message': 'Seja bem-vindo à comunidade, {member}! 🎉\nSinta-se em casa e aproveite nossa companhia!',
-                'leave_message': '{member} deixou a comunidade. Sentiremos sua falta! 👋',
+                'welcome_message': '🎉 Bem-vindo à comunidade, {member}! Sinta-se em casa!',
+                'leave_message': '👋 {member} deixou a comunidade. Sentiremos sua falta!',
                 'welcome_image': 'https://i.imgur.com/community_welcome.png',
             },
             
             'jogos': {
                 'icon': '🎮',
                 'color': discord.Color.dark_red(),
-                'description': 'Servidor dedicado a jogos e gamers',
+                'description': 'Servidor completo para gamers e e-sports',
                 'channels': {
                     'texto': [
                         ('📜┃regras', 'Regras do servidor'),
-                        ('🎯┃buscando-grupo', 'Encontre players'),
+                        ('📢┃anúncios', 'News e updates'),
+                        ('🎯┃buscando-grupo', 'Encontre seu squad'),
                         ('🏆┃ranking', 'Placar de líderes'),
-                        ('🎮┃geral-games', 'Chat sobre jogos'),
-                        ('🔫┃fps', 'Call of Duty, CS:GO, Valorant...'),
-                        ('⚔️┃moba', 'League of Legends, Dota 2...'),
-                        ('🌍┃mmorpg', 'WoW, FF14, Guild Wars...'),
+                        ('🎮┃chat-geral', 'Geral gaming'),
+                        ('🔫┃fps-games', 'CS:GO, Valorant, CoD'),
+                        ('⚔️┃moba', 'LoL, Dota, Smite'),
+                        ('🌍┃mmorpg', 'WoW, FF14, BDO'),
+                        ('🏗️┃sandbox', 'Minecraft, Terraria'),
                         ('🎲┃indie', 'Jogos independentes'),
-                        ('📺┃streams', 'Promova suas lives'),
+                        ('🎌┃gacha', 'Genshin, Honkai, FGO'),
+                        ('🏎️┃corrida', 'Forza, Gran Turismo'),
+                        ('⚽┃esports', 'FIFA, eFootball'),
+                        ('🧩┃puzzle', 'Jogos de lógica'),
+                        ('👻┃horror', 'Jogos de terror'),
+                        ('🎪┃casual', 'Jogos relaxantes'),
+                        ('📺┃streams', 'Promova sua live'),
+                        ('🎬┃clips', 'Melhores momentos'),
                         ('🤝┃recrutamento', 'Recrute para seu time'),
+                        ('🏆┃torneios', 'Campeonatos'),
+                        ('💰┃vendas-troca', 'Mercado de jogos'),
+                        ('🛠️┃mods', 'Modificações'),
+                        ('💻┃setup', 'Mostre seu setup'),
+                        ('📊┃estatísticas', 'Stats e análises'),
                     ],
                     'voz': [
                         ('🎙️┃Lobby', None),
                         ('🎙️┃Squad 1', 4),
                         ('🎙️┃Squad 2', 4),
                         ('🎙️┃Squad 3', 4),
-                        ('🎙️┃Ranked', 5),
-                        ('🎵┃Música', None),
-                        ('🔒┃Privado', 2),
+                        ('🎙️┃Ranked 5v5', 5),
+                        ('🎙️┃Ranked Duo', 2),
+                        ('🎙️┃MMORPG Raid', 8),
+                        ('🎵┃Música Game', None),
+                        ('🔒┃Clã Privado', 5),
+                        ('🎧┃AFK Gaming', None),
                     ]
                 },
                 'roles': [
-                    ('🏆 Admin', discord.Color.gold(), ['administrator'], True),
-                    ('🎮 Capitão', discord.Color.red(), ['move_members'], False),
-                    ('⭐ Pro Player', discord.Color.purple(), ['priority_speaker'], False),
-                    ('🎯 Streamer', discord.Color.pink(), ['send_messages'], False),
-                    ('🎲 Gamer', discord.Color.blue(), ['connect'], False),
-                    ('👀 Visitante', discord.Color.greyple(), ['view_channel'], False),
+                    ('🏆 Dono do Server', discord.Color.gold(), ['administrator'], True),
+                    ('🎮 Capitão', discord.Color.dark_gold(), ['manage_messages', 'move_members'], True),
+                    ('⭐ Coach', discord.Color.purple(), ['priority_speaker'], False),
+                    ('🔫 FPS Pro', discord.Color.red(), [], False),
+                    ('⚔️ MOBA King', discord.Color.blue(), [], False),
+                    ('🌍 MMO Veteran', discord.Color.green(), [], False),
+                    ('🎌 Gacha Whale', discord.Color.pink(), [], False),
+                    ('🏎️ Piloto', discord.Color.orange(), [], False),
+                    ('⚽ Esports Pro', discord.Color.teal(), [], False),
+                    ('🧩 Estrategista', discord.Color.dark_blue(), [], False),
+                    ('👻 Survival', discord.Color.dark_grey(), [], False),
+                    ('🎪 Casual', discord.Color.light_grey(), [], False),
+                    ('📺 Streamer', discord.Color.magenta(), [], False),
+                    ('🎬 Criador Conteúdo', discord.Color.from_rgb(255, 0, 255), [], False),
+                    ('🏆 Campeão', discord.Color.gold(), [], False),
+                    ('🥈 Elite', discord.Color.silver(), [], False),
+                    ('🥉 Competitivo', discord.Color.from_rgb(205, 127, 50), [], False),
+                    ('🎯 Tryhard', discord.Color.dark_red(), [], False),
+                    ('🎮 Gamer', discord.Color.blue(), [], False),
+                    ('🎒 Novato', discord.Color.green(), [], False),
+                    ('👀 Viewer', discord.Color.greyple(), ['view_channel'], False),
+                    ('🤖 Bot Game', discord.Color.from_rgb(32, 34, 37), [], False),
                 ],
-                'welcome_message': 'GG! {member} entrou no servidor! 🎮\nPrepara o mouse e o teclado, é hora de jogar!',
-                'leave_message': '{member} saiu do jogo. Até a próxima partida! 👋',
+                'welcome_message': '🎮 GG! {member} entrou no servidor! Prepara que é hora do clutch!',
+                'leave_message': '👋 {member} desconectou. Até a próxima partida!',
                 'welcome_image': 'https://i.imgur.com/gaming_welcome.png',
             },
             
             'estudo': {
                 'icon': '📚',
                 'color': discord.Color.teal(),
-                'description': 'Servidor para estudos e produtividade',
+                'description': 'Servidor completo para estudos e produtividade',
                 'channels': {
                     'texto': [
                         ('📋┃regras', 'Regras de conduta'),
                         ('📅┃calendário', 'Eventos e prazos'),
+                        ('📢┃avisos', 'Comunicados importantes'),
                         ('📚┃geral', 'Chat geral de estudos'),
-                        ('💻┃programação', 'Códigos e desenvolvimento'),
+                        ('💻┃programação', 'Códigos e dev'),
                         ('🔢┃matemática', 'Cálculos e fórmulas'),
-                        ('🌍┃idiomas', 'Prática de línguas'),
-                        ('🎨┃design', 'Arte e criatividade'),
+                        ('🔬┃ciências', 'Física, Química, Bio'),
+                        ('🌍┃humanas', 'História, Geo, Socio'),
+                        ('🗣️┃idiomas', 'Inglês, Espanhol, etc'),
+                        ('🎨┃artes', 'Desenho e criatividade'),
+                        ('🎵┃música', 'Teoria e prática'),
+                        ('🏥┃medicina', 'Saúde e anatomia'),
+                        ('⚖️┃direito', 'Leis e jurisprudência'),
+                        ('💼┃administração', 'Negócios e gestão'),
+                        ('🔧┃engenharia', 'Projetos e cálculos'),
+                        ('📝┃redação', 'Escrita e literatura'),
+                        ('🎯┃enem-vestibular', 'Preparação exames'),
+                        ('🎓┃faculdade', 'Ensino superior'),
+                        ('📖┃concursos', 'Preparação concursos'),
                         ('📝┃resumos', 'Compartilhe anotações'),
                         ('❓┃dúvidas', 'Tire suas dúvidas'),
-                        ('🎯┃metas', 'Compartilhe objetivos'),
+                        ('🎯┃metas', 'Objetivos diários'),
+                        ('🏆┃conquistas', 'Celebre suas vitórias'),
+                        ('🤝┃grupos-estudo', 'Forme equipes'),
                     ],
                     'voz': [
                         ('🔇┃Sala Silenciosa', None),
                         ('🗣️┃Discussão', None),
-                        ('📖┃Grupo de Estudo 1', 5),
-                        ('📖┃Grupo de Estudo 2', 5),
-                        ('🎵┃Lo-Fi', None),
+                        ('📖┃Grupo Estudo 1', 5),
+                        ('📖┃Grupo Estudo 2', 5),
+                        ('📖┃Grupo Estudo 3', 5),
+                        ('🎵┃Lo-Fi Focus', None),
+                        ('🎙️┃Apresentação', None),
+                        ('🔒┃Monitoria', 3),
+                        ('📞┃Dúvida Rápida', 2),
+                        ('🎧┃Descanso', None),
                     ]
                 },
                 'roles': [
-                    ('👨‍🏫 Professor', discord.Color.gold(), ['manage_messages'], True),
-                    ('🎓 Monitor', discord.Color.dark_blue(), ['mute_members'], False),
-                    ('📚 Aluno Destaque', discord.Color.purple(), ['send_messages'], False),
-                    ('✏️ Estudante', discord.Color.blue(), ['send_messages'], False),
-                    ('👤 Visitante', discord.Color.greyple(), ['view_channel'], False),
+                    ('👨‍🏫 Diretor', discord.Color.gold(), ['administrator'], True),
+                    ('👩‍🏫 Professor', discord.Color.dark_gold(), ['manage_messages', 'mute_members'], True),
+                    ('🎓 Monitor', discord.Color.purple(), ['mute_members'], False),
+                    ('💻 Dev Sênior', discord.Color.dark_blue(), [], False),
+                    ('💻 Dev Júnior', discord.Color.blue(), [], False),
+                    ('🔢 Matemático', discord.Color.red(), [], False),
+                    ('🔬 Cientista', discord.Color.green(), [], False),
+                    ('🌍 Historiador', discord.Color.orange(), [], False),
+                    ('🗣️ Poliglota', discord.Color.pink(), [], False),
+                    ('🎨 Artista', discord.Color.magenta(), [], False),
+                    ('🎵 Músico', discord.Color.teal(), [], False),
+                    ('🏥 Médico', discord.Color.from_rgb(255, 0, 0), [], False),
+                    ('⚖️ Advogado', discord.Color.dark_grey(), [], False),
+                    ('💼 Administrador', discord.Color.dark_green(), [], False),
+                    ('🔧 Engenheiro', discord.Color.from_rgb(128, 128, 128), [], False),
+                    ('📝 Escritor', discord.Color.from_rgb(139, 69, 19), [], False),
+                    ('🎯 Aprovado', discord.Color.gold(), [], False),
+                    ('📚 Aluno Destaque', discord.Color.purple(), [], False),
+                    ('✏️ Aluno', discord.Color.blue(), [], False),
+                    ('🌱 Iniciante', discord.Color.green(), [], False),
+                    ('👀 Observador', discord.Color.greyple(), ['view_channel'], False),
+                    ('🤖 Bot Educação', discord.Color.from_rgb(32, 34, 37), [], False),
                 ],
-                'welcome_message': 'Bem-vindo aos estudos, {member}! 📚\nQue o conhecimento esteja com você!',
-                'leave_message': '{member} deixou a sala de aula. Bons estudos! 👋',
+                'welcome_message': '📚 Bem-vindo aos estudos, {member}! Que o conhecimento esteja com você!',
+                'leave_message': '👋 {member} deixou a sala de aula. Bons estudos!',
                 'welcome_image': 'https://i.imgur.com/study_welcome.png',
             },
             
             'anime': {
                 'icon': '🍥',
                 'color': discord.Color.pink(),
-                'description': 'Servidor para fãs de anime e cultura japonesa',
+                'description': 'Servidor completo para fãs de anime e cultura japonesa',
                 'channels': {
                     'texto': [
                         ('📜┃regras', 'Regras do servidor'),
-                        ('🎌┃apresentações', 'Apresente-se otaku!'),
+                        ('📢┃anúncios', 'News do mundo otaku'),
+                        ('🎌┃apresentações', 'Apresente-se!'),
                         ('💬┃chat-geral', 'Conversa livre'),
                         ('📺┃recomendações', 'Indique animes'),
-                        ('🎨┃fanarts', 'Compartilhe suas artes'),
-                        ('🎵┃osts', 'Músicas de anime'),
-                        ('🎮┃games-anime', 'Gacha e jogos'),
+                        ('📺┃em-exibição', 'Temporada atual'),
+                        ('📺┃clássicos', 'Animes antigos'),
                         ('📖┃mangás', 'Discussão de mangás'),
-                        ('🎌┃cultura-japonesa', 'Cultura e idioma'),
-                        ('🔥┃spoilers', 'Cuidado com spoilers!'),
+                        ('📖┃light-novels', 'LNs e webnovels'),
+                        ('🎨┃fanarts', 'Arte da comunidade'),
+                        ('🎨┃cosplay', 'Fotos de cosplay'),
+                        ('🎵┃osts', 'Trilhas sonoras'),
+                        ('🎵┃openings', 'Aberturas e encerramentos'),
+                        ('🎮┃gacha-games', 'Genshin, FGO, etc'),
+                        ('🎮┃jogos-anime', 'Games de anime'),
+                        ('🎌┃cultura-japonesa', 'Japão e cultura'),
+                        ('🗣️┃japonês', 'Aprenda o idioma'),
+                        ('🍜┃culinária', 'Comida japonesa'),
+                        ('🔥┃batalhas', 'X1 de personagens'),
+                        ('⚔️┃versus', 'Debate de animes'),
+                        ('💕┃shipping', 'Casais e ships'),
+                        ('😂┃memes-otaku', 'Zoeira anime'),
+                        ('🎉┃eventos', 'Eventos da comunidade'),
+                        ('🎁┃sorteios', 'Prêmios para otakus'),
                     ],
                     'voz': [
                         ('🎙️┃Geral', None),
                         ('🎵┃Karaokê', None),
-                        ('📺┃Assistindo Juntos', None),
-                        ('🎮┃Gaming', None),
+                        ('📺┃Assistindo Junto', None),
+                        ('🎮┃Gacha & Games', None),
+                        ('🗣️┃Japonês', None),
+                        ('🔒┃Squad Otaku', 4),
+                        ('🎌┃Cultura', None),
+                        ('🎧┃Música Anime', None),
+                        ('🔥┃Debates', 6),
+                        ('🎧┃AFK', None),
                     ]
                 },
                 'roles': [
                     ('👑 Hokage', discord.Color.gold(), ['administrator'], True),
-                    ('🥷 Mod', discord.Color.red(), ['manage_messages'], False),
-                    ('⭐ Otaku VIP', discord.Color.purple(), ['send_messages'], False),
-                    ('🎨 Artista', discord.Color.pink(), ['attach_files'], False),
-                    ('🍜 Weeb', discord.Color.blue(), ['send_messages'], False),
-                    ('🌸 Novato', discord.Color.green(), ['send_messages'], False),
+                    ('🥷 Kage', discord.Color.dark_red(), ['manage_messages', 'kick_members'], True),
+                    ('🎌 Sensei', discord.Color.orange(), ['manage_messages'], False),
+                    ('⚡ Protagonista', discord.Color.yellow(), [], False),
+                    ('😈 Vilão', discord.Color.dark_purple(), [], False),
+                    ('🗡️ Espadachim', discord.Color.silver(), [], False),
+                    ('🔥 Super Sayajin', discord.Color.gold(), [], False),
+                    ('❄️ Shinigami', discord.Color.dark_blue(), [], False),
+                    ('🍥 Ninja', discord.Color.orange(), [], False),
+                    ('⚔️ Caçador', discord.Color.green(), [], False),
+                    ('🎭 Ghoul', discord.Color.red(), [], False),
+                    ('🎨 Artista', discord.Color.pink(), [], False),
+                    ('🎵 Cantor', discord.Color.magenta(), [], False),
+                    ('📺 Streamer', discord.Color.purple(), [], False),
+                    ('🎮 Gamer Otaku', discord.Color.blue(), [], False),
+                    ('🗣️ Polyglota', discord.Color.teal(), [], False),
+                    ('🍜 Cozinheiro', discord.Color.from_rgb(255, 140, 0), [], False),
+                    ('⭐ Otaku VIP', discord.Color.from_rgb(255, 215, 0), [], False),
+                    ('💎 Weeb', discord.Color.purple(), [], False),
+                    ('🍥 Otaku', discord.Color.pink(), [], False),
+                    ('🌸 Novato', discord.Color.green(), [], False),
+                    ('👀 Espectador', discord.Color.greyple(), ['view_channel'], False),
                 ],
-                'welcome_message': 'Ora ora, {member} chegou! 🍥\nDattebayo! Prepare-se para a aventura ninja!',
-                'leave_message': '{member} foi comer ramen. Sayonara! 👋',
+                'welcome_message': '🍥 Ora ora, {member} chegou! Dattebayo! Prepare-se para a aventura!',
+                'leave_message': '👋 {member} foi comer ramen. Sayonara!',
                 'welcome_image': 'https://i.imgur.com/anime_welcome.png',
             },
         }
@@ -269,24 +486,6 @@ async def on_ready():
         )
     )
     print(f'{bot.user} está online!')
-
-@bot.event
-async def on_guild_join(guild):
-    """Configura automação quando o bot entra em um servidor"""
-    # Criar canal de logs se não existir
-    logs_channel = discord.utils.get(guild.channels, name='logs-bot')
-    if not logs_channel:
-        try:
-            logs_channel = await guild.create_text_channel(
-                'logs-bot',
-                topic='Logs automáticas do bot',
-                overwrites={
-                    guild.default_role: discord.PermissionOverwrite(view_channel=False),
-                    guild.me: discord.PermissionOverwrite(view_channel=True)
-                }
-            )
-        except:
-            pass
 
 @bot.tree.command(name='createserver', description='Cria um novo servidor temático completo')
 @app_commands.describe(
@@ -314,18 +513,17 @@ async def create_server(
         return
     
     try:
-        # Criar o servidor
-        guild = await bot.create_guild(
-            name=nome,
-            icon=None,  # Pode adicionar ícone personalizado aqui
-            region=None
-        )
+        # Criar o servidor - CORRIGIDO (sem region)
+        guild = await bot.create_guild(name=nome)
         
         # Aguardar criação
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         
         # Buscar o servidor criado
         guild = bot.get_guild(guild.id)
+        if not guild:
+            await interaction.followup.send('❌ Erro ao acessar o servidor criado!', ephemeral=True)
+            return
         
         # Configurar servidor
         await setup_guild(guild, template, interaction.user)
@@ -384,11 +582,12 @@ async def setup_guild(guild: discord.Guild, template: dict, creator: discord.Use
             hoist=hoist
         )
         roles_map[role_name] = role
+        await asyncio.sleep(0.5)  # Evitar rate limit
     
     # 2. Configurar cargos do criador
     member = guild.get_member(creator.id)
     if member:
-        admin_role = roles_map.get(template['roles'][0][0])  # Primeiro cargo (admin)
+        admin_role = roles_map.get(template['roles'][0][0])
         if admin_role:
             await member.add_roles(admin_role)
     
@@ -396,49 +595,69 @@ async def setup_guild(guild: discord.Guild, template: dict, creator: discord.Use
     for channel in guild.channels:
         try:
             await channel.delete()
+            await asyncio.sleep(0.5)
         except:
             pass
     
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
     
-    # 4. Criar categorias e canais
-    # Categoria texto
-    cat_texto = await guild.create_category('📋 INFORMAÇÕES')
-    cat_chat = await guild.create_category('💬 COMUNIDADE')
+    # 4. Criar categorias
+    cat_info = await guild.create_category('📋 INFORMAÇÕES')
+    cat_chat = await guild.create_category('💬 CHATS')
+    cat_extra = await guild.create_category('🎯 ESPECIALIZADOS')
     cat_voz = await guild.create_category('🔊 CANAIS DE VOZ')
     
-    # Criar canais de texto
+    await asyncio.sleep(1)
+    
+    # 5. Criar canais de texto
     welcome_channel = None
     rules_channel = None
     
-    for i, (channel_name, topic) in enumerate(template['channels']['texto']):
-        if 'boas-vindas' in channel_name or 'regras' in channel_name:
-            target_cat = cat_texto
-        else:
-            target_cat = cat_chat
-        
+    # Dividir canais entre categorias
+    texto_channels = template['channels']['texto']
+    info_channels = texto_channels[:3]  # Primeiros 3 em info
+    chat_channels = texto_channels[3:13]  # Próximos 10 em chat
+    extra_channels = texto_channels[13:]  # Resto em extra
+    
+    for i, (channel_name, topic) in enumerate(info_channels):
         channel = await guild.create_text_channel(
             name=channel_name,
-            category=target_cat,
+            category=cat_info,
             topic=topic
         )
-        
         if 'boas-vindas' in channel_name:
             welcome_channel = channel
         elif 'regras' in channel_name:
             rules_channel = channel
+        await asyncio.sleep(0.5)
     
-    # Criar canais de voz
+    for channel_name, topic in chat_channels:
+        await guild.create_text_channel(
+            name=channel_name,
+            category=cat_chat,
+            topic=topic
+        )
+        await asyncio.sleep(0.5)
+    
+    for channel_name, topic in extra_channels:
+        await guild.create_text_channel(
+            name=channel_name,
+            category=cat_extra,
+            topic=topic
+        )
+        await asyncio.sleep(0.5)
+    
+    # 6. Criar canais de voz
     for channel_name, user_limit in template['channels']['voz']:
         await guild.create_voice_channel(
             name=channel_name,
             category=cat_voz,
             user_limit=user_limit
         )
+        await asyncio.sleep(0.5)
     
-    # 5. Configurar sistema de boas-vindas
+    # 7. Configurar sistema de boas-vindas
     if welcome_channel:
-        # Enviar mensagem de setup
         embed = discord.Embed(
             title=f'{template["icon"]} Bem-vindo ao {guild.name}!',
             description=template['description'],
@@ -450,7 +669,7 @@ async def setup_guild(guild: discord.Guild, template: dict, creator: discord.Use
         
         await welcome_channel.send(embed=embed)
     
-    # 6. Configurar regras
+    # 8. Configurar regras
     if rules_channel:
         rules_embed = discord.Embed(
             title='📜 Regras do Servidor',
@@ -477,36 +696,23 @@ async def setup_guild(guild: discord.Guild, template: dict, creator: discord.Use
             value='Divulgação apenas nos canais permitidos.',
             inline=False
         )
+        rules_embed.add_field(
+            name='5. Regras Específicas',
+            value='Siga as diretrizes de cada canal e tema.',
+            inline=False
+        )
         await rules_channel.send(embed=rules_embed)
-    
-    # 7. Configurar permissões dos cargos nos canais
-    for channel in guild.channels:
-        if isinstance(channel, discord.TextChannel):
-            # Permitir @everyone ver canais básicos
-            if 'regras' in channel.name or 'boas-vindas' in channel.name:
-                await channel.set_permissions(
-                    guild.default_role,
-                    view_channel=True,
-                    send_messages=False
-                )
-    
-    return welcome_channel
 
 @bot.event
 async def on_member_join(member):
     """Sistema automático de boas-vindas"""
     guild = member.guild
     
-    # Buscar template do servidor (se foi criado pelo bot)
-    # Nota: Em produção, você salvaria isso em um banco de dados
-    # Aqui usamos uma verificação simples pelo nome dos canais
-    
     welcome_channel = discord.utils.get(guild.channels, name='👋┃boas-vindas') or \
                      discord.utils.get(guild.channels, name='boas-vindas') or \
                      discord.utils.get(guild.text_channels, name=lambda n: 'bem-vindo' in n or 'welcome' in n)
     
     if welcome_channel:
-        # Detectar tema baseado nos cargos
         template = None
         for t_name, t_data in bot.templates.items():
             if discord.utils.get(guild.roles, name=t_data['roles'][0][0]):
@@ -514,7 +720,6 @@ async def on_member_join(member):
                 break
         
         if template:
-            # Criar embed de boas-vindas personalizado
             embed = discord.Embed(
                 title=f'{template["icon"]} Novo Membro!',
                 description=template['welcome_message'].format(member=member.mention),
@@ -528,7 +733,6 @@ async def on_member_join(member):
             
             await welcome_channel.send(embed=embed)
             
-            # Enviar DM de boas-vindas
             try:
                 dm_embed = discord.Embed(
                     title=f'Bem-vindo ao {guild.name}!',
@@ -544,12 +748,10 @@ async def on_member_remove(member):
     """Sistema de saída"""
     guild = member.guild
     
-    # Buscar canal de logs ou boas-vindas
     channel = discord.utils.get(guild.channels, name='👋┃boas-vindas') or \
               discord.utils.get(guild.channels, name='logs-bot')
     
     if channel:
-        # Detectar tema
         template = None
         for t_name, t_data in bot.templates.items():
             if discord.utils.get(guild.roles, name=t_data['roles'][0][0]):
@@ -566,7 +768,7 @@ async def on_member_remove(member):
             embed.set_thumbnail(url=member.display_avatar.url)
             await channel.send(embed=embed)
 
-@bot.tree.command(name='temas', description='Lista todos os temas disponíveis para criação de servidores')
+@bot.tree.command(name='temas', description='Lista todos os temas disponíveis')
 async def list_themes(interaction: discord.Interaction):
     embed = discord.Embed(
         title='🎨 Temas Disponíveis',
@@ -583,7 +785,7 @@ async def list_themes(interaction: discord.Interaction):
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
-@bot.tree.command(name='addemoji', description='Adiciona emojis personalizados ao servidor (Admin)')
+@bot.tree.command(name='addemoji', description='Adiciona emojis personalizados (Admin)')
 @app_commands.describe(
     imagem='Imagem do emoji (PNG/JPG)',
     nome='Nome do emoji'
@@ -602,70 +804,31 @@ async def add_emoji(interaction: discord.Interaction, imagem: discord.Attachment
     try:
         image_data = await imagem.read()
         emoji = await interaction.guild.create_custom_emoji(name=nome, image=image_data)
-        await interaction.followup.send(f'✅ Emoji :{nome}: adicionado com sucesso!', ephemeral=True)
+        await interaction.followup.send(f'✅ Emoji :{nome}: adicionado!', ephemeral=True)
     except Exception as e:
         await interaction.followup.send(f'❌ Erro: {str(e)}', ephemeral=True)
 
-@bot.tree.command(name='setupwelcome', description='Configura mensagem de boas-vindas personalizada (Admin)')
-@app_commands.describe(
-    mensagem='Mensagem de boas-vindas (use {member} para mencionar)',
-    imagem='URL da imagem de fundo (opcional)',
-    cor='Cor do embed (hex, ex: #FF5733)'
-)
-async def setup_welcome(
-    interaction: discord.Interaction,
-    mensagem: str,
-    imagem: str = None,
-    cor: str = None
-):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message('❌ Apenas administradores!', ephemeral=True)
-        return
-    
-    # Salvar configuração (em memória - em produção use banco de dados)
-    # Aqui você implementaria o salvamento
-    
-    color = discord.Color(int(cor.replace('#', ''), 16)) if cor else discord.Color.blue()
-    
-    embed = discord.Embed(
-        title='✅ Configuração Salva',
-        description='Mensagem de boas-vindas atualizada!',
-        color=color
-    )
-    embed.add_field(name='Mensagem', value=mensagem, inline=False)
-    if imagem:
-        embed.set_image(url=imagem)
-    
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-# Sistema de ajuda
-@bot.tree.command(name='ajuda', description='Mostra todos os comandos disponíveis')
+@bot.tree.command(name='ajuda', description='Mostra todos os comandos')
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
-        title='🤖 Comandos do ServerCreator Bot',
-        description='Bot profissional para criação de servidores temáticos',
+        title='🤖 ServerCreator Bot',
+        description='Bot profissional para criação de servidores',
         color=discord.Color.blue()
     )
     
     embed.add_field(
         name='🛠️ Criação',
-        value='`/createserver (tema) (nome)` - Cria um novo servidor completo\n`/temas` - Lista temas disponíveis',
+        value='`/createserver (tema) (nome)` - Cria servidor completo\n`/temas` - Lista temas disponíveis',
         inline=False
     )
     
     embed.add_field(
         name='⚙️ Gerenciamento',
-        value='`/addemoji (imagem) (nome)` - Adiciona emoji personalizado\n`/setupwelcome (mensagem)` - Configura boas-vindas',
+        value='`/addemoji (imagem) (nome)` - Adiciona emoji\n`/ajuda` - Este menu',
         inline=False
     )
     
-    embed.add_field(
-        name='🔄 Automação',
-        value='• Sistema de boas-vindas automático\n• Sistema de saída automático\n• Cargos pré-configurados\n• Canais organizados por categoria',
-        inline=False
-    )
-    
-    embed.set_footer(text='Desenvolvido com 💜 por SeuNome')
+    embed.set_footer(text='Desenvolvido com 💜')
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -673,6 +836,5 @@ async def help_command(interaction: discord.Interaction):
 if __name__ == '__main__':
     if not TOKEN:
         print("❌ ERRO: Token não encontrado! Verifique seu arquivo .env")
-        print("Crie um arquivo .env com: DISCORD_TOKEN=seu_token_aqui")
     else:
         bot.run(TOKEN)
