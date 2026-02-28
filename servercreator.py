@@ -1887,7 +1887,7 @@ async def on_member_remove(member):
         await channel.send(embed=embed)
 
 # ID do dono do bot (substitua pelo seu ID do Discord)
-ADMIN_USER_ID = 123456789012345678  # <-- SUBSTITUA PELO SEU ID DO DISCORD
+ADMIN_USER_ID = 1327679436128129159  # <-- SUBSTITUA PELO SEU ID DO DISCORD
 
 # Run the bot
 if __name__ == '__main__':
